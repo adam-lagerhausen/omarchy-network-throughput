@@ -2,6 +2,8 @@
 
 A compact Omarchy Quattro bar widget that stacks upload above download and opens a native per-process activity panel.
 
+![Network Throughput preview](preview.png)
+
 ## Features
 
 - Interface-wide upload and download rates in a narrow two-line bar slot
