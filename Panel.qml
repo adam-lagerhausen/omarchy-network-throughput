@@ -6,8 +6,8 @@ import qs.Ui
 
 Panel {
   id: root
-  moduleName: "io.github.egoist.network-throughput"
-  ipcTarget: "io.github.egoist.network-throughput"
+  moduleName: "dev.egoist.network-throughput"
+  ipcTarget: "dev.egoist.network-throughput"
   manageIpc: false
 
   property var anchorItem: null

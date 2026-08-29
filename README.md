@@ -22,7 +22,7 @@ omarchy plugin add https://github.com/egoist/omarchy-network-throughput.git --en
 The widget lands in the right section of the bar. Move it if needed:
 
 ```sh
-omarchy bar move io.github.egoist.network-throughput --section right
+omarchy bar move dev.egoist.network-throughput --section right
 ```
 
 ## Configure
@@ -30,13 +30,13 @@ omarchy bar move io.github.egoist.network-throughput --section right
 Set the fixed horizontal widget width (default `68`):
 
 ```sh
-omarchy bar set io.github.egoist.network-throughput width 68
+omarchy bar set dev.egoist.network-throughput width 68
 ```
 
 Set the number of recent process rows (default `5`, range `1–10`):
 
 ```sh
-omarchy bar set io.github.egoist.network-throughput processCount 5
+omarchy bar set dev.egoist.network-throughput processCount 5
 ```
 
 ## How attribution works
@@ -54,13 +54,13 @@ It uses commands included with a standard Omarchy installation: Bash, `ip`, `ss`
 ## Update
 
 ```sh
-omarchy plugin update io.github.egoist.network-throughput
+omarchy plugin update dev.egoist.network-throughput
 ```
 
 ## Remove
 
 ```sh
-omarchy plugin remove io.github.egoist.network-throughput
+omarchy plugin remove dev.egoist.network-throughput
 ```
 
 ## License

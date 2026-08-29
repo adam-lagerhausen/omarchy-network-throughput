@@ -6,7 +6,7 @@ import qs.Ui
 
 BarWidget {
   id: root
-  moduleName: "io.github.egoist.network-throughput"
+  moduleName: "dev.egoist.network-throughput"
 
   property string downloadText: "--"
   property string uploadText: "--"

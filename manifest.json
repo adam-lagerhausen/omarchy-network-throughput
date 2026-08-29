@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "io.github.egoist.network-throughput",
+  "id": "dev.egoist.network-throughput",
   "name": "Network Throughput",
   "version": "1.0.0",
   "author": "EGOIST",
