@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.egoist.network-throughput",
+  "name": "Network Throughput",
+  "version": "1.0.0",
+  "author": "EGOIST",
+  "license": "MIT",
+  "description": "Compact upload and download rates with a stable per-process activity panel.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Network Throughput",
+    "description": "Live interface throughput and recent per-process network activity.",
+    "category": "Network",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

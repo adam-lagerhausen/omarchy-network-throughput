@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+
+set -u
+export LC_ALL=C
+
+active_interface() {
+  ip route show default 2>/dev/null | awk '
+    {
+      for (i = 1; i <= NF; i++) {
+        if ($i == "dev" && i < NF) {
+          print $(i + 1)
+          exit
+        }
+      }
+    }
+  '
+}
+
+sample() {
+  local interface rx_file tx_file rx_bytes tx_bytes
+
+  interface=$(active_interface)
+  [[ -n $interface ]] || return 1
+
+  rx_file="/sys/class/net/$interface/statistics/rx_bytes"
+  tx_file="/sys/class/net/$interface/statistics/tx_bytes"
+  [[ -r $rx_file && -r $tx_file ]] || return 1
+
+  read -r rx_bytes < "$rx_file"
+  read -r tx_bytes < "$tx_file"
+  printf '%s\t%s\t%s\n' "$interface" "$rx_bytes" "$tx_bytes"
+}
+
+if ! read -r first_interface first_rx first_tx < <(sample); then
+  printf '↓ -- ↑ --\n'
+  exit 0
+fi
+
+started_ns=$(date +%s%N)
+sleep 0.75
+
+if ! read -r second_interface second_rx second_tx < <(sample); then
+  printf '↓ -- ↑ --\n'
+  exit 0
+fi
+finished_ns=$(date +%s%N)
+
+if [[ $first_interface != "$second_interface" ]]; then
+  printf '↓ -- ↑ --\n'
+  exit 0
+fi
+
+rx_delta=$((second_rx >= first_rx ? second_rx - first_rx : 0))
+tx_delta=$((second_tx >= first_tx ? second_tx - first_tx : 0))
+elapsed_ns=$((finished_ns - started_ns))
+
+awk -v rx="$rx_delta" -v tx="$tx_delta" -v elapsed="$elapsed_ns" '
+  function rate(bytes) {
+    if (elapsed <= 0) return 0
+    return bytes * 1000000000 / elapsed
+  }
+
+  function human(bytes) {
+    if (bytes < 1024) return sprintf("%d B/s", bytes)
+    if (bytes < 1048576) return sprintf(bytes < 10240 ? "%.1f KB/s" : "%.0f KB/s", bytes / 1024)
+    if (bytes < 1073741824) return sprintf(bytes < 10485760 ? "%.1f MB/s" : "%.0f MB/s", bytes / 1048576)
+    return sprintf("%.1f GB/s", bytes / 1073741824)
+  }
+
+  BEGIN {
+    printf "↓ %s  ↑ %s\n", human(rate(rx)), human(rate(tx))
+  }
+'

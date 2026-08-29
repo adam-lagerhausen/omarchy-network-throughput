@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+
+set -u
+export LC_ALL=C
+
+runtime_root=${XDG_RUNTIME_DIR:-/tmp}
+sample_dir=$(mktemp -d "$runtime_root/omarchy-process-throughput.XXXXXX")
+first_sample="$sample_dir/first"
+second_sample="$sample_dir/second"
+first_interface_sample="$sample_dir/first-interface"
+second_interface_sample="$sample_dir/second-interface"
+
+cleanup() {
+  [[ -d $sample_dir ]] && rm -rf -- "$sample_dir"
+}
+trap cleanup EXIT
+
+active_interface() {
+  ip route show default 2>/dev/null | awk '
+    {
+      for (i = 1; i <= NF; i++) {
+        if ($i == "dev" && i < NF) {
+          print $(i + 1)
+          exit
+        }
+      }
+    }
+  '
+}
+
+sample_interface() {
+  local interface rx_file tx_file rx_bytes tx_bytes sampled_ns
+
+  interface=$(active_interface)
+  [[ -n $interface ]] || return 1
+
+  rx_file="/sys/class/net/$interface/statistics/rx_bytes"
+  tx_file="/sys/class/net/$interface/statistics/tx_bytes"
+  [[ -r $rx_file && -r $tx_file ]] || return 1
+
+  read -r rx_bytes < "$rx_file"
+  read -r tx_bytes < "$tx_file"
+  sampled_ns=$(date +%s%N)
+  printf '%s\t%s\t%s\t%s\n' "$interface" "$rx_bytes" "$tx_bytes" "$sampled_ns"
+}
+
+snapshot() {
+  ss -tinpH 2>/dev/null | awk '
+    /^ESTAB/ {
+      pid = ""
+      fd = ""
+      name = ""
+      local_socket = 0
+
+      # Local IPC only seeds the idle process roster; it never contributes to
+      # interface throughput. Synthetic/TUN addresses remain attributable.
+      if ($4 ~ /^127\./ || $4 ~ /^\[?::1\]?:/) local_socket = 1
+
+      if (match($0, /users:\(\("([^"]+)",pid=([0-9]+),fd=([0-9]+)/, owner)) {
+        name = owner[1]
+        pid = owner[2]
+        fd = owner[3]
+      }
+      next
+    }
+
+    /^[[:space:]]/ && pid != "" {
+      received = 0
+      sent = 0
+      if (match($0, /bytes_received:([0-9]+)/, counter)) received = counter[1]
+      if (match($0, /bytes_sent:([0-9]+)/, counter)) sent = counter[1]
+      print pid "\t" fd "\t" name "\t" received "\t" sent "\t" local_socket
+      pid = ""
+      fd = ""
+      name = ""
+    }
+  '
+}
+
+snapshot > "$first_sample"
+started_ns=$(date +%s%N)
+sample_interface > "$first_interface_sample" || :
+sleep 0.75
+snapshot > "$second_sample"
+finished_ns=$(date +%s%N)
+sample_interface > "$second_interface_sample" || :
+elapsed_ns=$((finished_ns - started_ns))
+
+first_interface=""
+second_interface=""
+first_rx=0
+first_tx=0
+first_interface_ns=0
+second_rx=0
+second_tx=0
+second_interface_ns=0
+read -r first_interface first_rx first_tx first_interface_ns < "$first_interface_sample" || :
+read -r second_interface second_rx second_tx second_interface_ns < "$second_interface_sample" || :
+
+interface_matches=0
+if [[ -n $first_interface && $first_interface == "$second_interface" ]]; then
+  interface_matches=1
+fi
+
+awk -F '\t' \
+  -v elapsed="$elapsed_ns" \
+  -v interface_matches="$interface_matches" \
+  -v first_rx="$first_rx" \
+  -v first_tx="$first_tx" \
+  -v first_interface_ns="$first_interface_ns" \
+  -v second_rx="$second_rx" \
+  -v second_tx="$second_tx" \
+  -v second_interface_ns="$second_interface_ns" '
+  NR == FNR {
+    previous_received[$1 "/" $2] = $4
+    previous_sent[$1 "/" $2] = $5
+    next
+  }
+
+  {
+    socket = $1 "/" $2
+    if (!(socket in previous_received) || elapsed <= 0) next
+
+    if ($6 + 0 != 0) {
+      download_rate = 0
+      upload_rate = 0
+    } else {
+      received_delta = $4 >= previous_received[socket] ? $4 - previous_received[socket] : 0
+      sent_delta = $5 >= previous_sent[socket] ? $5 - previous_sent[socket] : 0
+      download_rate = received_delta * 1000000000 / elapsed
+      upload_rate = sent_delta * 1000000000 / elapsed
+    }
+
+    process = $1 "\t" $3
+    downloads[process] += download_rate
+    uploads[process] += upload_rate
+    attributed_download += download_rate
+    attributed_upload += upload_rate
+  }
+
+  END {
+    for (process in downloads) {
+      split(process, fields, "\t")
+      printf "%s\t%s\t%.0f\t%.0f\t%.0f\n", fields[1], fields[2], downloads[process], uploads[process], downloads[process] + uploads[process]
+    }
+
+    interface_download = 0
+    interface_upload = 0
+    interface_elapsed = second_interface_ns - first_interface_ns
+    if (interface_matches && interface_elapsed > 0) {
+      rx_delta = second_rx >= first_rx ? second_rx - first_rx : 0
+      tx_delta = second_tx >= first_tx ? second_tx - first_tx : 0
+      interface_download = rx_delta * 1000000000 / interface_elapsed
+      interface_upload = tx_delta * 1000000000 / interface_elapsed
+    }
+
+    other_download = interface_download - attributed_download
+    other_upload = interface_upload - attributed_upload
+    if (other_download < 0) other_download = 0
+    if (other_upload < 0) other_upload = 0
+
+    # Interface counters include UDP/HTTP3, proxy or TUN forwarding, system
+    # services, short-lived sockets, and protocol overhead that ss cannot
+    # assign to this user. Keep the totals honest with one catch-all row.
+    if (other_download > 0 || other_upload > 0) {
+      printf "0\tOther traffic\t%.0f\t%.0f\t%.0f\n", other_download, other_upload, other_download + other_upload
+    }
+  }
+' "$first_sample" "$second_sample" |
+  sort -t $'\t' -k5,5nr -k2,2 -k1,1n |
+  head -n 32 |
+  jq -Rn '[inputs | split("\t") | {
+    pid: (.[0] | tonumber),
+    name: .[1],
+    downloadBytesPerSecond: (.[2] | tonumber),
+    uploadBytesPerSecond: (.[3] | tonumber)
+  }]'
