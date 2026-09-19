@@ -32,7 +32,7 @@ sample() {
 }
 
 if ! read -r first_interface first_rx first_tx < <(sample); then
-  printf '↓ -- ↑ --\n'
+  printf '↓ 0.0MB  ↑ 0.0MB\n'
   exit 0
 fi
 
@@ -40,13 +40,13 @@ started_ns=$(date +%s%N)
 sleep 0.75
 
 if ! read -r second_interface second_rx second_tx < <(sample); then
-  printf '↓ -- ↑ --\n'
+  printf '↓ 0.0MB  ↑ 0.0MB\n'
   exit 0
 fi
 finished_ns=$(date +%s%N)
 
 if [[ $first_interface != "$second_interface" ]]; then
-  printf '↓ -- ↑ --\n'
+  printf '↓ 0.0MB  ↑ 0.0MB\n'
   exit 0
 fi
 
@@ -61,10 +61,7 @@ awk -v rx="$rx_delta" -v tx="$tx_delta" -v elapsed="$elapsed_ns" '
   }
 
   function human(bytes) {
-    if (bytes < 1024) return sprintf("%d B/s", bytes)
-    if (bytes < 1048576) return sprintf(bytes < 10240 ? "%.1f KB/s" : "%.0f KB/s", bytes / 1024)
-    if (bytes < 1073741824) return sprintf(bytes < 10485760 ? "%.1f MB/s" : "%.0f MB/s", bytes / 1048576)
-    return sprintf("%.1f GB/s", bytes / 1073741824)
+    return sprintf("%.1fMB", bytes / 1048576)
   }
 
   BEGIN {

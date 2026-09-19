@@ -8,14 +8,16 @@ BarWidget {
   id: root
   moduleName: "dev.egoist.network-throughput"
 
-  property string downloadText: "--"
-  property string uploadText: "--"
+  property string downloadText: "0.0MB"
+  property string uploadText: "0.0MB"
 
   readonly property real configuredWidth: {
-    var value = Number(setting("width", 68))
-    return isFinite(value) && value > 0 ? Math.max(48, Math.min(180, value)) : 68
+    var value = Number(setting("width", 80))
+    return isFinite(value) && value > 0 ? Math.max(48, Math.min(180, value)) : 80
   }
   readonly property real rateFontSize: Math.max(8, Style.font.caption)
+  // Always one decimal megabyte, padded through gigabit-class "125.0MB".
+  readonly property int rateDisplayWidth: 7
   readonly property string throughputScript: localPath(Qt.resolvedUrl("scripts/network-throughput"))
 
   readonly property bool opened: panelLoader.item
@@ -35,10 +37,18 @@ BarWidget {
     if (!throughputProcess.running) throughputProcess.running = true
   }
 
+  function displayRate(value) {
+    var text = String(value || "0.0MB")
+    if (text === "--") text = "0.0MB"
+    while (text.length < rateDisplayWidth)
+      text = " " + text
+    return text
+  }
+
   function updateRates(raw) {
     var match = String(raw || "").trim().match(/^↓\s+(.+?)\s+↑\s+(.+)$/)
-    downloadText = match ? match[1] : "--"
-    uploadText = match ? match[2] : "--"
+    downloadText = match ? match[1] : "0.0MB"
+    uploadText = match ? match[2] : "0.0MB"
   }
 
   function open() {
@@ -114,7 +124,7 @@ BarWidget {
 
         Text {
           id: uploadArrow
-          anchors.left: parent.left
+          anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
           width: Style.spaceReal(10)
           text: "↑"
@@ -126,17 +136,17 @@ BarWidget {
         }
 
         Text {
-          anchors.left: uploadArrow.right
-          anchors.right: parent.right
+          anchors.left: parent.left
+          anchors.right: uploadArrow.left
           anchors.verticalCenter: parent.verticalCenter
-          text: root.uploadText
+          text: root.displayRate(root.uploadText)
           color: button.foreground
           font.family: button.fontFamily
           font.pixelSize: root.rateFontSize
-          minimumPixelSize: 8
-          fontSizeMode: Text.HorizontalFit
+          font.features: { "tnum": 1 }
           horizontalAlignment: Text.AlignRight
           renderType: Text.NativeRendering
+          clip: true
         }
       }
 
@@ -146,7 +156,7 @@ BarWidget {
 
         Text {
           id: downloadArrow
-          anchors.left: parent.left
+          anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
           width: Style.spaceReal(10)
           text: "↓"
@@ -158,17 +168,17 @@ BarWidget {
         }
 
         Text {
-          anchors.left: downloadArrow.right
-          anchors.right: parent.right
+          anchors.left: parent.left
+          anchors.right: downloadArrow.left
           anchors.verticalCenter: parent.verticalCenter
-          text: root.downloadText
+          text: root.displayRate(root.downloadText)
           color: button.foreground
           font.family: button.fontFamily
           font.pixelSize: root.rateFontSize
-          minimumPixelSize: 8
-          fontSizeMode: Text.HorizontalFit
+          font.features: { "tnum": 1 }
           horizontalAlignment: Text.AlignRight
           renderType: Text.NativeRendering
+          clip: true
         }
       }
     }
