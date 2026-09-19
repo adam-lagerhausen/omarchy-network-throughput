@@ -8,16 +8,16 @@ BarWidget {
   id: root
   moduleName: "dev.egoist.network-throughput"
 
-  property string downloadText: "--"
-  property string uploadText: "--"
+  property string downloadText: "0.0MB"
+  property string uploadText: "0.0MB"
 
   readonly property real configuredWidth: {
     var value = Number(setting("width", 80))
     return isFinite(value) && value > 0 ? Math.max(48, Math.min(180, value)) : 80
   }
   readonly property real rateFontSize: Math.max(8, Style.font.caption)
-  // Longest common rates such as "12.4 MB/s" and "1024 KB/s".
-  readonly property int rateDisplayWidth: 9
+  // Always one decimal megabyte, padded through gigabit-class "125.0MB".
+  readonly property int rateDisplayWidth: 7
   readonly property string throughputScript: localPath(Qt.resolvedUrl("scripts/network-throughput"))
 
   readonly property bool opened: panelLoader.item
@@ -38,7 +38,8 @@ BarWidget {
   }
 
   function displayRate(value) {
-    var text = String(value || "--")
+    var text = String(value || "0.0MB")
+    if (text === "--") text = "0.0MB"
     while (text.length < rateDisplayWidth)
       text = " " + text
     return text
@@ -46,8 +47,8 @@ BarWidget {
 
   function updateRates(raw) {
     var match = String(raw || "").trim().match(/^↓\s+(.+?)\s+↑\s+(.+)$/)
-    downloadText = match ? match[1] : "--"
-    uploadText = match ? match[2] : "--"
+    downloadText = match ? match[1] : "0.0MB"
+    uploadText = match ? match[2] : "0.0MB"
   }
 
   function open() {
@@ -123,7 +124,7 @@ BarWidget {
 
         Text {
           id: uploadArrow
-          anchors.left: parent.left
+          anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
           width: Style.spaceReal(10)
           text: "↑"
@@ -135,8 +136,8 @@ BarWidget {
         }
 
         Text {
-          anchors.left: uploadArrow.right
-          anchors.right: parent.right
+          anchors.left: parent.left
+          anchors.right: uploadArrow.left
           anchors.verticalCenter: parent.verticalCenter
           text: root.displayRate(root.uploadText)
           color: button.foreground
@@ -155,7 +156,7 @@ BarWidget {
 
         Text {
           id: downloadArrow
-          anchors.left: parent.left
+          anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
           width: Style.spaceReal(10)
           text: "↓"
@@ -167,8 +168,8 @@ BarWidget {
         }
 
         Text {
-          anchors.left: downloadArrow.right
-          anchors.right: parent.right
+          anchors.left: parent.left
+          anchors.right: downloadArrow.left
           anchors.verticalCenter: parent.verticalCenter
           text: root.displayRate(root.downloadText)
           color: button.foreground

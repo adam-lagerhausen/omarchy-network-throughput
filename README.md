@@ -6,7 +6,7 @@ A compact Omarchy Quattro bar widget that stacks upload above download and opens
 
 ## Features
 
-- Interface-wide upload and download rates in a narrow two-line bar slot
+- Interface-wide upload and download rates in a narrow two-line bar slot, always as megabytes (`12.4MB ↑` / `0.8MB ↓`)
 - Stable recent-process roster that keeps idle apps visible at `0 B/s`
 - Per-process TCP throughput without root privileges
 - An **Other traffic** row for UDP/HTTP3, proxy/TUN, system-owned, short-lived, and protocol-overhead traffic
