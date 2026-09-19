@@ -12,10 +12,12 @@ BarWidget {
   property string uploadText: "--"
 
   readonly property real configuredWidth: {
-    var value = Number(setting("width", 68))
-    return isFinite(value) && value > 0 ? Math.max(48, Math.min(180, value)) : 68
+    var value = Number(setting("width", 80))
+    return isFinite(value) && value > 0 ? Math.max(48, Math.min(180, value)) : 80
   }
   readonly property real rateFontSize: Math.max(8, Style.font.caption)
+  // Longest common rates such as "12.4 MB/s" and "1024 KB/s".
+  readonly property int rateDisplayWidth: 9
   readonly property string throughputScript: localPath(Qt.resolvedUrl("scripts/network-throughput"))
 
   readonly property bool opened: panelLoader.item
@@ -33,6 +35,13 @@ BarWidget {
 
   function refresh() {
     if (!throughputProcess.running) throughputProcess.running = true
+  }
+
+  function displayRate(value) {
+    var text = String(value || "--")
+    while (text.length < rateDisplayWidth)
+      text = " " + text
+    return text
   }
 
   function updateRates(raw) {
@@ -129,14 +138,14 @@ BarWidget {
           anchors.left: uploadArrow.right
           anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
-          text: root.uploadText
+          text: root.displayRate(root.uploadText)
           color: button.foreground
           font.family: button.fontFamily
           font.pixelSize: root.rateFontSize
-          minimumPixelSize: 8
-          fontSizeMode: Text.HorizontalFit
+          font.features: { "tnum": 1 }
           horizontalAlignment: Text.AlignRight
           renderType: Text.NativeRendering
+          clip: true
         }
       }
 
@@ -161,14 +170,14 @@ BarWidget {
           anchors.left: downloadArrow.right
           anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
-          text: root.downloadText
+          text: root.displayRate(root.downloadText)
           color: button.foreground
           font.family: button.fontFamily
           font.pixelSize: root.rateFontSize
-          minimumPixelSize: 8
-          fontSizeMode: Text.HorizontalFit
+          font.features: { "tnum": 1 }
           horizontalAlignment: Text.AlignRight
           renderType: Text.NativeRendering
+          clip: true
         }
       }
     }

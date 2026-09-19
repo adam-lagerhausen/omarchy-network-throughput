@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "dev.egoist.network-throughput",
   "name": "Network Throughput",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "EGOIST",
   "license": "MIT",
   "description": "Compact upload and download rates with a stable per-process activity panel.",

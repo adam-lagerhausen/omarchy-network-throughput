@@ -27,10 +27,10 @@ omarchy bar move dev.egoist.network-throughput --section right
 
 ## Configure
 
-Set the fixed horizontal widget width (default `68`):
+Set the fixed horizontal widget width (default `80`):
 
 ```sh
-omarchy bar set dev.egoist.network-throughput width 68
+omarchy bar set dev.egoist.network-throughput width 80
 ```
 
 Set the number of recent process rows (default `5`, range `1–10`):
